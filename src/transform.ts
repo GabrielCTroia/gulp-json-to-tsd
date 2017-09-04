@@ -2,6 +2,7 @@
 import * as path from "path";
 import { Options } from "./options";
 import { TsdBuilder } from "./tsd-builder";
+import * as _ from 'lodash';
 
 function isLatinLetter(char: string) {
     return char >= "a" && char <= "z"
@@ -49,23 +50,40 @@ function getVariableName(fileName: string): string {
     return result;
 }
 
+type PrimitiveTypes = 'null|undefined' | 'number' | 'string' | 'boolean';
+
+function getType(value: any, currentIndentation): PrimitiveTypes | string {
+    if (value == null) {
+        return "null|undefined";
+    } else if (typeof value === "number") {
+        return "number";
+    } else if (typeof value === "string") {
+        return "string";
+    } else if (typeof value === "boolean") {
+        return "boolean";
+    } else if (_.isArray(value)) {
+        const allElementTypes = _.map(_.values(value), getType);
+        const uniqElementTypes = _.uniq(allElementTypes);
+        
+        // TODO: Add option to throw error when strict no any is enforced
+        const commonElementType = uniqElementTypes.length === 1 ? uniqElementTypes[0] : 'any';
+
+        return `${commonElementType}[]`;
+    } else if (typeof value === "object") {
+        const nestedBuilder = new TsdBuilder('', "tab", 2)
+
+        transformObject(value, nestedBuilder);
+
+        return `{ ${nestedBuilder.toString()} }`;
+    }
+
+    return 'any';
+}
+
 function transformObject(json: any, builder: TsdBuilder) {
     for (let key in json) {
         if (!json.hasOwnProperty(key)) continue;
-        const value = json[key];
-        if (value == null) {
-            builder.property(key, "null|undefined")
-        } else if (typeof value === "number") {
-            builder.property(key, "number")
-        } else if (typeof value === "string") {
-            builder.property(key, "string")
-        } else if (typeof value === "boolean") {
-            builder.property(key, "boolean")
-        } else if (typeof value === "object") {
-            builder.beginObjectProperty(key);
-            transformObject(value, builder);
-            builder.endObjectProperty();
-        }
+        builder.property(key, getType(json[key], builder.getCurrentIndentation()))
     }
 }
 

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var path = require("path");
 var tsd_builder_1 = require("./tsd-builder");
+var _ = require("lodash");
 function isLatinLetter(char) {
     return char >= "a" && char <= "z"
         || char >= "A" && char <= "Z";
@@ -45,28 +46,37 @@ function getVariableName(fileName) {
     var result = getCamelCase(fileName, false, false);
     return result;
 }
+function getType(value, currentIndentation) {
+    if (value == null) {
+        return "null|undefined";
+    }
+    else if (typeof value === "number") {
+        return "number";
+    }
+    else if (typeof value === "string") {
+        return "string";
+    }
+    else if (typeof value === "boolean") {
+        return "boolean";
+    }
+    else if (_.isArray(value)) {
+        var allElementTypes = _.map(_.values(value), getType);
+        var uniqElementTypes = _.uniq(allElementTypes);
+        var commonElementType = uniqElementTypes.length === 1 ? uniqElementTypes[0] : 'any';
+        return commonElementType + "[]";
+    }
+    else if (typeof value === "object") {
+        var nestedBuilder = new tsd_builder_1.TsdBuilder('', "tab", 2);
+        transformObject(value, nestedBuilder);
+        return "{ " + nestedBuilder.toString() + " }";
+    }
+    return 'any';
+}
 function transformObject(json, builder) {
     for (var key in json) {
         if (!json.hasOwnProperty(key))
             continue;
-        var value = json[key];
-        if (value == null) {
-            builder.property(key, "null|undefined");
-        }
-        else if (typeof value === "number") {
-            builder.property(key, "number");
-        }
-        else if (typeof value === "string") {
-            builder.property(key, "string");
-        }
-        else if (typeof value === "boolean") {
-            builder.property(key, "boolean");
-        }
-        else if (typeof value === "object") {
-            builder.beginObjectProperty(key);
-            transformObject(value, builder);
-            builder.endObjectProperty();
-        }
+        builder.property(key, getType(json[key], builder.getCurrentIndentation()));
     }
 }
 function transform(file, json, encoding, options) {

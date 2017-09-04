@@ -53,6 +53,19 @@ export class TsdBuilder {
         return this;
     }
 
+    public beginArrayProperty(name: string): TsdBuilder {
+        const statement = `"${name}": [`;
+        this.putStatement(statement);
+        this.beginIdentation();
+        return this;
+    }
+
+    public endArrayProperty(): TsdBuilder {
+        this.endIdentation();
+        this.putStatement("];");
+        return this;
+    }
+
     public declareConstant(name: string, type: string): TsdBuilder {
         this.putStatement(`declare const ${name}: ${type};`);
         return this;
@@ -71,7 +84,15 @@ export class TsdBuilder {
         --this.currentIdentation;
     }
 
+    public getCurrentIndentation() {
+        return this.currentIdentation;
+    }
+
     public toBuffer(): Buffer {
         return Buffer.concat(this.chunks);
+    }
+
+    public toString(): string {
+        return this.chunks.join('');
     }
 }

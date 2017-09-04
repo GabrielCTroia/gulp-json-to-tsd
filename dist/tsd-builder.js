@@ -47,6 +47,17 @@ var TsdBuilder = (function () {
         this.putStatement("};");
         return this;
     };
+    TsdBuilder.prototype.beginArrayProperty = function (name) {
+        var statement = "\"" + name + "\": [";
+        this.putStatement(statement);
+        this.beginIdentation();
+        return this;
+    };
+    TsdBuilder.prototype.endArrayProperty = function () {
+        this.endIdentation();
+        this.putStatement("];");
+        return this;
+    };
     TsdBuilder.prototype.declareConstant = function (name, type) {
         this.putStatement("declare const " + name + ": " + type + ";");
         return this;
@@ -60,8 +71,14 @@ var TsdBuilder = (function () {
     TsdBuilder.prototype.endIdentation = function () {
         --this.currentIdentation;
     };
+    TsdBuilder.prototype.getCurrentIndentation = function () {
+        return this.currentIdentation;
+    };
     TsdBuilder.prototype.toBuffer = function () {
         return Buffer.concat(this.chunks);
+    };
+    TsdBuilder.prototype.toString = function () {
+        return this.chunks.join('');
     };
     return TsdBuilder;
 }());
